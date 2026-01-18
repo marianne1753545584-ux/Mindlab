@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>思维演武场</title>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+</head>
+<body class="bg-slate-50 p-4 pb-20">
+    <header class="mb-6 flex justify-between items-end">
+        <h1 class="text-2xl font-black italic">MIND LAB.</h1>
+        <div class="text-xs text-slate-400 font-mono" id="cur-date"></div>
+    </header>
+
+    <button onclick="syncData()" class="w-full mb-6 bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-100 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+        <span>🔄 粘贴并同步今日议题</span>
+    </button>
+
+    <div id="main-card" class="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-slate-100">
+        <div id="tag" class="text-blue-500 text-[10px] font-black tracking-widest mb-1 uppercase">Loading...</div>
+        <h2 id="title" class="text-xl font-bold text-slate-800 mb-3">请先运行快捷指令并同步</h2>
+        <p id="desc" class="text-slate-500 text-sm leading-relaxed mb-6 italic"></p>
+        
+        <textarea id="thought-input" oninput="saveMyThought()" class="w-full bg-slate-50 p-4 rounded-2xl text-sm h-48 outline-none focus:ring-1 focus:ring-blue-400 transition-all" placeholder="开始你的批判性思考..."></textarea>
+    </div>
+
+    <div id="expert-card" class="bg-amber-50 rounded-3xl p-6 hidden border border-amber-100">
+        <h3 class="text-amber-900 font-bold text-sm mb-2 font-mono">Yesterday's Contrast (专家对冲)</h3>
+        <p id="expert-text" class="text-amber-800 text-sm leading-relaxed"></p>
+    </div>
+
+    <script>
+        // 初始化日期和索引 (周一为0, 周日为6)
+        const todayIdx = (new Date().getDay() + 6) % 7; 
+        document.getElementById('cur-date').innerText = new Date().toLocaleDateString();
+
+        function render() {
+            const data = JSON.parse(localStorage.getItem('think_agenda') || "[]");
+            if(data.length > 0) {
+                const item = data[todayIdx] || data[0];
+                document.getElementById('tag').innerText = (item.tag || "深度") + " 维度";
+                document.getElementById('title').innerText = item.title;
+                document.getElementById('desc').innerText = item.desc;
+                
+                // 加载之前存过的思考内容
+                document.getElementById('thought-input').value = localStorage.getItem('my_thought_' + todayIdx) || "";
+
+                // 只有不是周一时，才显示前一天的专家观点
+                if(todayIdx > 0 && data[todayIdx-1].expert) {
+                    document.getElementById('expert-card').classList.remove('hidden');
+                    document.getElementById('expert-text').innerText = data[todayIdx-1].expert;
+                }
+            }
+        }
+
+        // 自动保存思考内容
+        function saveMyThought() {
+            const content = document.getElementById('thought-input').value;
+            localStorage.setItem('my_thought_' + todayIdx, content);
+        }
+
+        async function syncData() {
+            try {
+                // 1. 获取剪贴板文本
+                let text = await navigator.clipboard.readText();
+                
+                // 2. 容错处理：去除 DeepSeek 可能返回的 Markdown 代码块标签
+                text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+                
+                const json = JSON.parse(text);
+                
+                // 3. 解析 DeepSeek 的嵌套内容
+                let content = json.choices[0].message.content;
+                // 再次处理内容中的 Markdown 标签
+                content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+                
+                const agenda = JSON.parse(content);
+                
+                // 4. 存储并刷新
+                localStorage.setItem('think_agenda', JSON.stringify(agenda));
+                alert("✅ 同步成功！");
+                render();
+            } catch(e) {
+                console.error(e);
+                alert("❌ 解析失败：请确保你复制了完整的 API 返回内容。");
+            }
+        }
+
+        // 页面启动时自动渲染
+        window.onload = render;
+    </script>
+</body>
+</html>
