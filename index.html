@@ -30,29 +30,40 @@
     </div>
 
     <script>
-        // 初始化日期和索引 (周一为0, 周日为6)
-        const todayIdx = (new Date().getDay() + 6) % 7; 
-        document.getElementById('cur-date').innerText = new Date().toLocaleDateString();
+        async function syncData() {
+    try {
+        // 1. 从剪贴板读取原始文本
+        let rawText = await navigator.clipboard.readText();
+        console.log("原始数据:", rawText);
 
-        function render() {
-            const data = JSON.parse(localStorage.getItem('think_agenda') || "[]");
-            if(data.length > 0) {
-                const item = data[todayIdx] || data[0];
-                document.getElementById('tag').innerText = (item.tag || "深度") + " 维度";
-                document.getElementById('title').innerText = item.title;
-                document.getElementById('desc').innerText = item.desc;
-                
-                // 加载之前存过的思考内容
-                document.getElementById('thought-input').value = localStorage.getItem('my_thought_' + todayIdx) || "";
+        // 2. 预处理：去掉 AI 偶尔自带的 ```json 标签
+        rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
 
-                // 只有不是周一时，才显示前一天的专家观点
-                if(todayIdx > 0 && data[todayIdx-1].expert) {
-                    document.getElementById('expert-card').classList.remove('hidden');
-                    document.getElementById('expert-text').innerText = data[todayIdx-1].expert;
-                }
-            }
+        let finalAgenda;
+        const jsonObj = JSON.parse(rawText);
+
+        // 3. 核心解析逻辑：判断是“整段返回”还是“纯内容”
+        if (jsonObj.choices && jsonObj.choices[0] && jsonObj.choices[0].message) {
+            // 如果是完整的 DeepSeek API 返回
+            let content = jsonObj.choices[0].message.content;
+            content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+            finalAgenda = JSON.parse(content);
+        } else if (Array.isArray(jsonObj)) {
+            // 如果已经是解析好的数组
+            finalAgenda = jsonObj;
+        } else {
+            throw new Error("格式不匹配");
         }
 
+        // 4. 存储与渲染
+        localStorage.setItem('think_agenda', JSON.stringify(finalAgenda));
+        alert("✅ 同步成功！数据已更新。");
+        render();
+    } catch (e) {
+        console.error("解析错误详情:", e);
+        alert("❌ 解析失败。原因：\n1. 请确认快捷指令运行成功且已点击拷贝。\n2. 剪贴板内容可能不完整。");
+    }
+}
         // 自动保存思考内容
         function saveMyThought() {
             const content = document.getElementById('thought-input').value;
