@@ -92,41 +92,48 @@
             localStorage.setItem('thought_' + todayIdx, val);
             document.getElementById('char-count').innerText = val.length + " chars";
         }
+        
+async function syncData() {
+    const btn = document.getElementById('sync-text');
+    try {
+        btn.innerText = "处理中...";
+        let text = await navigator.clipboard.readText();
+        
+        // --- 核心增强解析逻辑 ---
+        let agendaData = null;
 
-        async function syncData() {
-            const btn = document.getElementById('sync-text');
-            try {
-                btn.innerText = "处理中...";
-                let text = await navigator.clipboard.readText();
-                
-                // 深度解析逻辑：去除 Markdown 代码块并寻找 JSON
-                text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-                
-                let agenda;
-                const outerJson = JSON.parse(text);
-                
-                // 适配 DeepSeek 返回结构
-                if(outerJson.choices) {
-                    let content = outerJson.choices[0].message.content;
-                    content = content.replace(/```json/g, "").replace(/```/g, "").trim();
-                    agenda = JSON.parse(content);
-                } else {
-                    agenda = outerJson;
-                }
-
-                if(!Array.isArray(agenda)) throw new Error("数据非数组格式");
-
-                localStorage.setItem('think_agenda', JSON.stringify(agenda));
-                btn.innerText = "同步成功！";
-                setTimeout(() => { btn.innerText = "粘贴并同步今日议题"; }, 2000);
-                render();
-            } catch(e) {
-                console.error(e);
-                btn.innerText = "格式错误，请重试";
-                setTimeout(() => { btn.innerText = "粘贴并同步今日议题"; }, 2000);
-                alert("❌ 解析失败：请确保复制的是 DeepSeek API 的原始完整返回内容。");
+        // 尝试 1: 如果是 DeepSeek 完整的原始返回体
+        try {
+            const fullJson = JSON.parse(text);
+            if (fullJson.choices && fullJson.choices[0].message.content) {
+                text = fullJson.choices[0].message.content;
             }
+        } catch(e) { /* 不是完整JSON，继续尝试下一种 */ }
+
+        // 尝试 2: 强力正则提取 (即使 AI 输出了 ```json ... ``` 或其他文字)
+        const jsonMatch = text.match(/\[\s*\{.*\}\s*\]/s); 
+        if (jsonMatch) {
+            agendaData = JSON.parse(jsonMatch[0]);
+        } else {
+            // 尝试直接解析
+            agendaData = JSON.parse(text.replace(/```json/g, "").replace(/```/g, "").trim());
         }
+
+        if(!Array.isArray(agendaData)) throw new Error("解析结果不是数组");
+
+        // --- 存储与同步 ---
+        localStorage.setItem('think_agenda', JSON.stringify(agendaData));
+        btn.innerText = "同步成功！";
+        setTimeout(() => { btn.innerText = "粘贴并同步今日议题"; }, 2000);
+        render();
+        
+    } catch(e) {
+        console.error(e);
+        btn.innerText = "格式错误";
+        setTimeout(() => { btn.innerText = "粘贴并同步今日议题"; }, 2000);
+        alert("❌ 解析失败\n可能原因：\n1. 快捷指令运行未完成\n2. 请在快捷指令Prompt中强调：'只输出JSON数组，不要任何开头结尾'");
+    }
+}
 
         function copyMyThought() {
             const content = document.getElementById('thought-input').value;
