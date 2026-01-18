@@ -1,103 +1,150 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>思维演武场</title>
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        .card-active { border: 2px solid #2563eb; }
+    </style>
 </head>
-<body class="bg-slate-50 p-4 pb-20">
-    <header class="mb-6 flex justify-between items-end">
-        <h1 class="text-2xl font-black italic">MIND LAB.</h1>
-        <div class="text-xs text-slate-400 font-mono" id="cur-date"></div>
-    </header>
+<body class="bg-[#f8fafc] text-[#1e293b] leading-relaxed">
+    <nav class="sticky top-0 z-50 glass border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+        <h1 class="text-xl font-black italic tracking-tighter text-blue-600">MIND LAB.</h1>
+        <div id="cur-date" class="text-[10px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-500 uppercase"></div>
+    </nav>
 
-    <button onclick="syncData()" class="w-full mb-6 bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-100 flex items-center justify-center gap-2 active:scale-95 transition-transform">
-        <span>🔄 粘贴并同步今日议题</span>
-    </button>
+    <main class="max-w-lg mx-auto p-6 space-y-6">
+        <section>
+            <button onclick="syncData()" class="group relative w-full overflow-hidden bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-xl transition-all active:scale-[0.98]">
+                <div class="relative z-10 flex items-center justify-center gap-2">
+                    <span id="sync-icon">🔄</span>
+                    <span id="sync-text">粘贴并同步今日议题</span>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-active:opacity-100 transition-opacity"></div>
+            </button>
+            <p class="text-[10px] text-center text-slate-400 mt-3 uppercase tracking-widest font-bold">请确保已运行快捷指令并复制内容</p>
+        </section>
 
-    <div id="main-card" class="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-slate-100">
-        <div id="tag" class="text-blue-500 text-[10px] font-black tracking-widest mb-1 uppercase">Loading...</div>
-        <h2 id="title" class="text-xl font-bold text-slate-800 mb-3">请先运行快捷指令并同步</h2>
-        <p id="desc" class="text-slate-500 text-sm leading-relaxed mb-6 italic"></p>
-        
-        <textarea id="thought-input" oninput="saveMyThought()" class="w-full bg-slate-50 p-4 rounded-2xl text-sm h-48 outline-none focus:ring-1 focus:ring-blue-400 transition-all" placeholder="开始你的批判性思考..."></textarea>
-    </div>
+        <section id="main-card" class="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200/60 relative overflow-hidden">
+            <div id="tag" class="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full mb-4 uppercase tracking-tighter">
+                Waiting...
+            </div>
+            <h2 id="title" class="text-2xl font-black text-slate-800 mb-4 leading-tight">准备好开始今天的深度思考了吗？</h2>
+            <p id="desc" class="text-slate-500 text-sm mb-8 leading-relaxed italic border-l-2 border-slate-100 pl-4"></p>
+            
+            <div class="relative">
+                <textarea id="thought-input" oninput="saveThought()" class="w-full bg-slate-50 p-5 rounded-2xl text-base h-44 outline-none focus:ring-2 focus:ring-blue-100 transition-all border border-transparent focus:border-blue-200" placeholder="在此输入你的逻辑拆解、利益博弈分析..."></textarea>
+                <div class="absolute bottom-4 right-4 text-[10px] text-slate-300 font-mono" id="char-count">0 chars</div>
+            </div>
+        </section>
 
-    <div id="expert-card" class="bg-amber-50 rounded-3xl p-6 hidden border border-amber-100">
-        <h3 class="text-amber-900 font-bold text-sm mb-2 font-mono">Yesterday's Contrast (专家对冲)</h3>
-        <p id="expert-text" class="text-amber-800 text-sm leading-relaxed"></p>
-    </div>
+        <section id="expert-card" class="hidden transform transition-all duration-700">
+            <div class="bg-amber-50 rounded-[2rem] p-8 border border-amber-100/50 relative">
+                <div class="absolute -top-3 left-8 px-4 py-1 bg-amber-200 text-amber-900 text-[10px] font-black rounded-full uppercase">
+                    昨日专家对冲视角
+                </div>
+                <p id="expert-text" class="text-amber-900/80 text-[15px] leading-relaxed font-medium"></p>
+            </div>
+        </section>
+
+        <div class="flex gap-3">
+            <button onclick="copyMyThought()" class="flex-1 bg-white border border-slate-200 py-3 rounded-xl text-xs font-bold text-slate-600 active:bg-slate-50">复制我的思考</button>
+            <button onclick="clearAll()" class="px-4 py-3 rounded-xl text-xs font-bold text-red-400 active:bg-red-50">重置</button>
+        </div>
+    </main>
 
     <script>
-        async function syncData() {
-    try {
-        // 1. 从剪贴板读取原始文本
-        let rawText = await navigator.clipboard.readText();
-        console.log("原始数据:", rawText);
+        const todayIdx = (new Date().getDay() + 6) % 7; 
+        document.getElementById('cur-date').innerText = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-        // 2. 预处理：去掉 AI 偶尔自带的 ```json 标签
-        rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+        function render() {
+            const raw = localStorage.getItem('think_agenda');
+            if(!raw) return;
+            
+            const data = JSON.parse(raw);
+            if(data.length > 0) {
+                const item = data[todayIdx] || data[0];
+                document.getElementById('tag').innerText = (item.tag || "深度") + " 维度";
+                document.getElementById('title').innerText = item.title;
+                document.getElementById('desc').innerText = item.desc;
+                
+                // 加载思考记录
+                const saved = localStorage.getItem('thought_' + todayIdx);
+                const input = document.getElementById('thought-input');
+                input.value = saved || "";
+                document.getElementById('char-count').innerText = (saved?.length || 0) + " chars";
 
-        let finalAgenda;
-        const jsonObj = JSON.parse(rawText);
-
-        // 3. 核心解析逻辑：判断是“整段返回”还是“纯内容”
-        if (jsonObj.choices && jsonObj.choices[0] && jsonObj.choices[0].message) {
-            // 如果是完整的 DeepSeek API 返回
-            let content = jsonObj.choices[0].message.content;
-            content = content.replace(/```json/g, "").replace(/```/g, "").trim();
-            finalAgenda = JSON.parse(content);
-        } else if (Array.isArray(jsonObj)) {
-            // 如果已经是解析好的数组
-            finalAgenda = jsonObj;
-        } else {
-            throw new Error("格式不匹配");
-        }
-
-        // 4. 存储与渲染
-        localStorage.setItem('think_agenda', JSON.stringify(finalAgenda));
-        alert("✅ 同步成功！数据已更新。");
-        render();
-    } catch (e) {
-        console.error("解析错误详情:", e);
-        alert("❌ 解析失败。原因：\n1. 请确认快捷指令运行成功且已点击拷贝。\n2. 剪贴板内容可能不完整。");
-    }
-}
-        // 自动保存思考内容
-        function saveMyThought() {
-            const content = document.getElementById('thought-input').value;
-            localStorage.setItem('my_thought_' + todayIdx, content);
-        }
-
-        async function syncData() {
-            try {
-                // 1. 获取剪贴板文本
-                let text = await navigator.clipboard.readText();
-                
-                // 2. 容错处理：去除 DeepSeek 可能返回的 Markdown 代码块标签
-                text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-                
-                const json = JSON.parse(text);
-                
-                // 3. 解析 DeepSeek 的嵌套内容
-                let content = json.choices[0].message.content;
-                // 再次处理内容中的 Markdown 标签
-                content = content.replace(/```json/g, "").replace(/```/g, "").trim();
-                
-                const agenda = JSON.parse(content);
-                
-                // 4. 存储并刷新
-                localStorage.setItem('think_agenda', JSON.stringify(agenda));
-                alert("✅ 同步成功！");
-                render();
-            } catch(e) {
-                console.error(e);
-                alert("❌ 解析失败：请确保你复制了完整的 API 返回内容。");
+                // 显示昨日对冲
+                if(todayIdx > 0 && data[todayIdx-1].expert) {
+                    document.getElementById('expert-card').classList.remove('hidden');
+                    document.getElementById('expert-text').innerText = data[todayIdx-1].expert;
+                }
             }
         }
 
-        // 页面启动时自动渲染
+        function saveThought() {
+            const val = document.getElementById('thought-input').value;
+            localStorage.setItem('thought_' + todayIdx, val);
+            document.getElementById('char-count').innerText = val.length + " chars";
+        }
+
+        async function syncData() {
+            const btn = document.getElementById('sync-text');
+            try {
+                btn.innerText = "处理中...";
+                let text = await navigator.clipboard.readText();
+                
+                // 深度解析逻辑：去除 Markdown 代码块并寻找 JSON
+                text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+                
+                let agenda;
+                const outerJson = JSON.parse(text);
+                
+                // 适配 DeepSeek 返回结构
+                if(outerJson.choices) {
+                    let content = outerJson.choices[0].message.content;
+                    content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+                    agenda = JSON.parse(content);
+                } else {
+                    agenda = outerJson;
+                }
+
+                if(!Array.isArray(agenda)) throw new Error("数据非数组格式");
+
+                localStorage.setItem('think_agenda', JSON.stringify(agenda));
+                btn.innerText = "同步成功！";
+                setTimeout(() => { btn.innerText = "粘贴并同步今日议题"; }, 2000);
+                render();
+            } catch(e) {
+                console.error(e);
+                btn.innerText = "格式错误，请重试";
+                setTimeout(() => { btn.innerText = "粘贴并同步今日议题"; }, 2000);
+                alert("❌ 解析失败：请确保复制的是 DeepSeek API 的原始完整返回内容。");
+            }
+        }
+
+        function copyMyThought() {
+            const content = document.getElementById('thought-input').value;
+            const title = document.getElementById('title').innerText;
+            if(!content) return alert("还没有输入思考内容哦");
+            
+            const textToCopy = `【思维演武场】\n议题：${title}\n我的思考：\n${content}`;
+            navigator.clipboard.writeText(textToCopy);
+            alert("✅ 已复制到剪贴板，去分享吧！");
+        }
+
+        function clearAll() {
+            if(confirm("确定要清空所有数据吗？")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
         window.onload = render;
     </script>
 </body>
