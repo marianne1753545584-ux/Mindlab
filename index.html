@@ -59,33 +59,31 @@
     </main>
 
     <script>
-        const todayIdx = (new Date().getDay() + 6) % 7; 
-        document.getElementById('cur-date').innerText = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        // 在页面加载时，自动检查 URL 中是否带有 data 参数
+window.onload = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const encodedData = urlParams.get('data');
 
-        function render() {
-            const raw = localStorage.getItem('think_agenda');
-            if(!raw) return;
-            
-            const data = JSON.parse(raw);
-            if(data.length > 0) {
-                const item = data[todayIdx] || data[0];
-                document.getElementById('tag').innerText = (item.tag || "深度") + " 维度";
-                document.getElementById('title').innerText = item.title;
-                document.getElementById('desc').innerText = item.desc;
-                
-                // 加载思考记录
-                const saved = localStorage.getItem('thought_' + todayIdx);
-                const input = document.getElementById('thought-input');
-                input.value = saved || "";
-                document.getElementById('char-count').innerText = (saved?.length || 0) + " chars";
-
-                // 显示昨日对冲
-                if(todayIdx > 0 && data[todayIdx-1].expert) {
-                    document.getElementById('expert-card').classList.remove('hidden');
-                    document.getElementById('expert-text').innerText = data[todayIdx-1].expert;
-                }
+    if (encodedData) {
+        try {
+            // 解码并解析数据
+            let text = decodeURIComponent(encodedData);
+            // 强力提取 JSON 数组
+            const match = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (match) {
+                localStorage.setItem('think_agenda', match[0]);
+                alert("✅ 快捷指令数据同步成功！");
+                // 清除 URL 中的参数，防止重复弹窗
+                window.history.replaceState({}, document.title, window.location.pathname);
             }
+        } catch (e) {
+            console.error("自动同步失败", e);
         }
+    }
+    render(); // 运行原有的渲染函数
+};
+
+// ... 原有的 render 和 saveThought 函数保持不变 ...
 
         function saveThought() {
             const val = document.getElementById('thought-input').value;
