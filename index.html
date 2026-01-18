@@ -97,44 +97,54 @@ async function syncData() {
     const btn = document.getElementById('sync-text');
     try {
         btn.innerText = "处理中...";
+        // 1. 获取剪贴板原始文本
         let text = await navigator.clipboard.readText();
         
-        // --- 核心增强解析逻辑 ---
-        let agendaData = null;
+        // 2. 预处理：深度清洗
+        // 去掉可能的 Markdown 标签和多余空白
+        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-        // 尝试 1: 如果是 DeepSeek 完整的原始返回体
+        let finalJsonText = "";
+
+        // 3. 智能提取逻辑
+        // 方案 A: 尝试解析是否为 DeepSeek 的原始完整 JSON
         try {
-            const fullJson = JSON.parse(text);
-            if (fullJson.choices && fullJson.choices[0].message.content) {
-                text = fullJson.choices[0].message.content;
+            const fullObj = JSON.parse(text);
+            if (fullObj.choices && fullObj.choices[0].message.content) {
+                finalJsonText = fullObj.choices[0].message.content;
+            } else {
+                finalJsonText = text;
             }
-        } catch(e) { /* 不是完整JSON，继续尝试下一种 */ }
-
-        // 尝试 2: 强力正则提取 (即使 AI 输出了 ```json ... ``` 或其他文字)
-        const jsonMatch = text.match(/\[\s*\{.*\}\s*\]/s); 
-        if (jsonMatch) {
-            agendaData = JSON.parse(jsonMatch[0]);
-        } else {
-            // 尝试直接解析
-            agendaData = JSON.parse(text.replace(/```json/g, "").replace(/```/g, "").trim());
+        } catch(e) {
+            // 方案 B: 如果不是标准 JSON，尝试用正则表达式强行抠出数组内容 [...]
+            const match = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (match) {
+                finalJsonText = match[0];
+            } else {
+                finalJsonText = text;
+            }
         }
 
-        if(!Array.isArray(agendaData)) throw new Error("解析结果不是数组");
+        // 4. 二次清洗并最终解析
+        finalJsonText = finalJsonText.replace(/```json/g, "").replace(/```/g, "").trim();
+        const agenda = JSON.parse(finalJsonText);
 
-        // --- 存储与同步 ---
-        localStorage.setItem('think_agenda', JSON.stringify(agendaData));
-        btn.innerText = "同步成功！";
+        if (!Array.isArray(agenda)) throw new Error("解析结果不是有效的议题数组");
+
+        // 5. 存储并成功反馈
+        localStorage.setItem('think_agenda', JSON.stringify(agenda));
+        btn.innerText = "✅ 同步成功";
         setTimeout(() => { btn.innerText = "粘贴并同步今日议题"; }, 2000);
         render();
-        
-    } catch(e) {
-        console.error(e);
-        btn.innerText = "格式错误";
+
+    } catch (e) {
+        console.error("解析详情:", e);
+        btn.innerText = "❌ 格式错误";
         setTimeout(() => { btn.innerText = "粘贴并同步今日议题"; }, 2000);
-        alert("❌ 解析失败\n可能原因：\n1. 快捷指令运行未完成\n2. 请在快捷指令Prompt中强调：'只输出JSON数组，不要任何开头结尾'");
+        alert("同步失败！\n请确保：\n1. 快捷指令运行完毕并已拷贝内容\n2. 拷贝内容中包含以 [ 开头的议题数组");
     }
 }
-
+        
         function copyMyThought() {
             const content = document.getElementById('thought-input').value;
             const title = document.getElementById('title').innerText;
